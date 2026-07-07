@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LogFlow — Convertitore di file di log in CSV strutturati</title>
+  <meta name="description" content="Trasforma i tuoi file di log Apache, Syslog o personalizzati in CSV pronti per l'analisi. Carica il file, scegli il parser e scarica il risultato in un click.">
+  <link rel="canonical" href="https://cristianporco.it/app/convertitore-di-file-di-log-in-file-csv-strutturati-con-parser-automatico/">
+  <base href="./">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="LogFlow — Convertitore di file di log in CSV strutturati">
+  <meta property="og:description" content="Trasforma log Apache, Syslog o personalizzati in CSV pronti per l'analisi. Parser automatico lato server.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://cristianporco.it/app/convertitore-di-file-di-log-in-file-csv-strutturati-con-parser-automatico/">
+
+  <!-- JSON-LD -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "LogFlow",
+    "url": "https://cristianporco.it/app/convertitore-di-file-di-log-in-file-csv-strutturati-con-parser-automatico/",
+    "description": "Convertitore di file di log in CSV strutturati con parser automatico per Apache, Syslog e formati personalizzati.",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Web"
+  }
+  </script>
+
+  <!-- Fonts: Space Grotesk (display), Inter (body), JetBrains Mono (code) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    /* ── Reset & tokens ─────────────────────────────────────────── */
+    :root {
+      --surface:     #F8F9FB;
+      --card:        #FFFFFF;
+      --text:        #1E293B;
+      --text-muted:  #64748B;
+      --primary:     #2563EB;
+      --primary-dim: #DBEAFE;
+      --primary-bg:  #EFF6FF;
+      --accent:      #7C3AED;
+      --accent-dim:  #EDE9FE;
+      --success:     #059669;
+      --success-dim: #D1FAE5;
+      --error:       #DC2626;
+      --error-dim:   #FEE2E2;
+      --border:      #E2E8F0;
+      --border-focus:#93C5FD;
+      --shadow-sm:   0 1px 2px rgba(0,0,0,.05);
+      --shadow-md:   0 4px 12px rgba(0,0,0,.08);
+      --shadow-lg:   0 8px 24px rgba(0,0,0,.10);
+      --radius-sm:   6px;
+      --radius-md:   8px;
+      --radius-lg:   12px;
+      --font-display:'Space Grotesk', system-ui, sans-serif;
+      --font-body:   'Inter', system-ui, sans-serif;
+      --font-mono:   'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+      --max-w:       960px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { font-size: 16px; -webkit-text-size-adjust: 100%; }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--surface);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Focus visible ─────────────────────────────────────────── */
+    :focus-visible {
+      outline: 2px solid var(--primary);
+      outline-offset: 2px;
+      border-radius: 2px;
+    }
+
+    /* ── Reduced motion ────────────────────────────────────────── */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    /* ── Header ────────────────────────────────────────────────── */
+    .site-header {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 0;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      box-shadow: var(--shadow-sm);
+    }
+    .header-inner {
+      max-width: var(--max-w);
+      margin: 0 auto;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .logo-mark {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 1.25rem;
+      color: var(--primary);
+      letter-spacing: -0.02em;
+      user-select: none;
+    }
+    .logo-dot {
+      display: inline-block;
+      width: 8px; height: 8px;
+      background: var(--accent);
+      border-radius: 50%;
+      margin-left: 2px;
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.4); }
+    }
+    .header-tagline {
+      font-size: 0.8125rem;
+      color: var(--text-muted);
+      font-weight: 400;
+      margin-left: 4px;
+      display: none;
+    }
+    @media (min-width: 520px) {
+      .header-tagline { display: inline; }
+    }
+
+    /* ── Main ──────────────────────────────────────────────────── */
+    .site-main {
+      flex: 1;
+      max-width: var(--max-w);
+      width: 100%;
+      margin: 0 auto;
+      padding: 24px 20px 48px;
+    }
+
+    /* ── Eyebrow ───────────────────────────────────────────────── */
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.6875rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      margin-bottom: 4px;
+    }
+
+    h1 {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: clamp(1.5rem, 4vw, 1.875rem);
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 0.9375rem;
+      margin-bottom: 20px;
+    }
+
+    /* ── Card ──────────────────────────────────────────────────── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 20px;
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .card-header h2 {
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 1rem;
+      letter-spacing: -0.01em;
+    }
+    .step-num {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--primary);
+      background: var(--primary-bg);
+      border-radius: var(--radius-sm);
+      padding: 2px 8px;
+      min-width: 28px;
+      text-align: center;
+    }
+
+    /* ── Drop zone ─────────────────────────────────────────────── */
+    .drop-zone {
+      position: relative;
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-md);
+      padding: 28px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 200ms, background 200ms;
+      background: var(--surface);
+    }
+    .drop-zone:hover,
+    .drop-zone.dragover {
+      border-color: var(--primary);
+      background: var(--primary-bg);
+    }
+    .drop-zone.has-file {
+      border-style: solid;
+      border-color: var(--success);
+      background: var(--success-dim);
+    }
+    .drop-zone-icon {
+      font-family: var(--font-mono);
+      font-size: 1.5rem;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .cursor-blink {
+      display: inline-block;
+      width: 2px;
+      height: 1.2em;
+      background: var(--accent);
+      animation: blink 1s step-end infinite;
+      vertical-align: text-bottom;
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+    .drop-zone.has-file .cursor-blink { animation: none; opacity: 0; }
+    .drop-zone-text {
+      font-size: 0.9375rem;
+      color: var(--text);
+      font-weight: 500;
+    }
+    .drop-zone-hint {
+      font-size: 0.8125rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+    .drop-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+    .file-name-display {
+      font-family: var(--font-mono);
+      font-size: 0.8125rem;
+      color: var(--success);
+      font-weight: 500;
+      margin-top: 8px;
+      word-break: break-all;
+    }
+
+    /* ── Format selector ───────────────────────────────────────── */
+    .format-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .format-btn {
+      position: relative;
+      flex: 1;
+      min-width: 100px;
+      font-family: var(--font-body);
+      font-size: 0.875rem;
+      font-weight: 500;
+      padding: 10px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--card);
+      color: var(--text);
+      cursor: pointer;
+      transition: border-color 200ms, background 200ms, box-shadow 200ms;
+      text-align: left;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    .format-btn:hover {
+      border-color: var(--primary-dim);
+      background: var(--primary-bg);
+    }
+    .format-btn.active {
+      border-color: var(--primary);
+      background: var(--primary-bg);
+      box-shadow: 0 0 0 3px var(--primary-dim);
+    }
+    .format-btn-icon {
+      font-family: var(--font-mono);
+      font-size: 1.125rem;
+      flex-shrink: 0;
+    }
+    .format-btn-label {
+      line-height: 1.3;
+    }
+    .format-btn-label small {
+      display: block;
+      font-size: 0.6875rem;
+      color: var(--text-muted);
+      font-weight: 400;
+    }
+
+    /* ── Custom regex ──────────────────────────────────────────── */
+    .regex-area {
+      margin-top: 12px;
+      display: none;
+    }
+    .regex-area.visible { display: block; }
+    .regex-area label {
+      display: block;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: var(--text);
+    }
+    .regex-area .regex-help {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+    .regex-input-wrap {
+      position: relative;
+    }
+    .regex-input-wrap input {
+      width: 100%;
+      font-family: var(--font-mono);
+      font-size: 0.8125rem;
+      padding: 10px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--surface);
+      color: var(--text);
+      transition: border-color 200ms;
+    }
+    .regex-input-wrap input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-dim);
+      outline: none;
+    }
+    .regex-input-wrap input::placeholder {
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+
+    /* ── Parse button ──────────────────────────────────────────── */
+    .btn-parse {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 0.9375rem;
+      letter-spacing: -0.01em;
+      padding: 12px 24px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: background 200ms, transform 150ms, box-shadow 200ms;
+      min-height: 44px;
+      min-width: 44px;
+      margin-top: 16px;
+    }
+    .btn-parse:hover { background: #1D4ED8; }
+    .btn-parse:active { transform: scale(0.97); }
+    .btn-parse:disabled {
+      background: #94A3B8;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .btn-parse .spinner {
+      display: none;
+      width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 600ms linear infinite;
+    }
+    .btn-parse.loading .spinner { display: inline-block; }
+    .btn-parse.loading .btn-label { display: none; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Error / status ────────────────────────────────────────── */
+    .status-msg {
+      display: none;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 0.875rem;
+      margin-top: 12px;
+      line-height: 1.5;
+    }
+    .status-msg.visible { display: block; }
+    .status-msg.error {
+      background: var(--error-dim);
+      color: var(--error);
+      border: 1px solid #FCA5A5;
+    }
+    .status-msg.info {
+      background: var(--primary-bg);
+      color: var(--primary);
+      border: 1px solid var(--primary-dim);
+    }
+
+    /* ── Results ───────────────────────────────────────────────── */
+    .results-section {
+      display: none;
+      margin-top: 20px;
+    }
+    .results-section.visible { display: block; }
+
+    .results-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .results-count {
+      font-family: var(--font-mono);
+      font-size: 0.8125rem;
+      font-weight: 500;
+      padding: 4px 10px;
+      border-radius: 20px;
+    }
+    .results-count.ok {
+      background: var(--success-dim);
+      color: var(--success);
+    }
+    .results-count.warn {
+      background: #FEF3C7;
+      color: #D97706;
+    }
+    .btn-download {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-body);
+      font-weight: 600;
+      font-size: 0.875rem;
+      padding: 8px 16px;
+      background: var(--success);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: background 200ms;
+      min-height: 44px;
+      min-width: 44px;
+      margin-left: auto;
+    }
+    .btn-download:hover { background: #047857; }
+
+    /* ── Table ─────────────────────────────────────────────────── */
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--card);
+      max-height: 420px;
+      overflow-y: auto;
+    }
+    .table-wrap table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8125rem;
+      white-space: nowrap;
+    }
+    .table-wrap thead {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+    .table-wrap th {
+      font-family: var(--font-mono);
+      font-size: 0.6875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      text-align: left;
+      padding: 10px 12px;
+      background: var(--surface);
+      border-bottom: 2px solid var(--border);
+      color: var(--text-muted);
+    }
+    .table-wrap td {
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+    }
+    .table-wrap tr:last-child td { border-bottom: none; }
+    .table-wrap tr:nth-child(even) td { background: rgba(0,0,0,.015); }
+    .table-wrap tr:hover td { background: var(--primary-bg); }
+
+    .cell-ip { color: var(--primary); font-weight: 500; }
+    .cell-method { color: var(--accent); font-weight: 500; }
+    .cell-status { font-weight: 600; }
+    .cell-status-ok { color: var(--success); }
+    .cell-status-err { color: var(--error); }
+
+    /* ── Footer ────────────────────────────────────────────────── */
+    .site-footer {
+      text-align: center;
+      padding: 16px 20px;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border);
+    }
+
+    /* ── Responsive ────────────────────────────────────────────── */
+    @media (max-width: 600px) {
+      .card { padding: 16px; }
+      .drop-zone { padding: 20px 16px; }
+      .format-group { flex-direction: column; }
+      .btn-parse { width: 100%; justify-content: center; }
+      .results-meta { flex-direction: column; align-items: flex-start; }
+      .btn-download { margin-left: 0; width: 100%; justify-content: center; }
+    }
+
+    /* ── Errors panel ──────────────────────────────────────────── */
+    .errors-panel {
+      margin-top: 12px;
+      display: none;
+    }
+    .errors-panel.visible { display: block; }
+    .errors-toggle {
+      font-family: var(--font-body);
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: #D97706;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px 0;
+      text-decoration: underline;
+    }
+    .errors-list {
+      margin-top: 8px;
+      max-height: 160px;
+      overflow-y: auto;
+      background: #FFFBEB;
+      border: 1px solid #FDE68A;
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      font-family: var(--font-mono);
+      font-size: 0.6875rem;
+      color: #92400E;
+      line-height: 1.7;
+    }
+    .errors-list div { padding: 2px 0; }
+  </style>
+</head>
+<body>
+
+<header class="site-header" role="banner">
+  <div class="header-inner">
+    <span class="logo-mark" aria-label="LogFlow">LogFlow<span class="logo-dot" aria-hidden="true"></span></span>
+    <span class="header-tagline">Convertitore log → CSV</span>
+  </div>
+</header>
+
+<main class="site-main" role="main">
+  <p class="eyebrow">Parser automatico</p>
+  <h1>Converti i tuoi file di log<br>in tabelle CSV strutturate</h1>
+  <p class="subtitle">Carica un file di log, scegli il formato di parsing e ottieni un CSV pulito con i campi già estratti — tutto lato server, nessun dato lascia il tuo browser se non verso il parser integrato.</p>
+
+  <!-- STEP 1: Upload -->
+  <section class="card" aria-labelledby="step1-title">
+    <div class="card-header">
+      <span class="step-num">1</span>
+      <h2 id="step1-title">Carica il file di log</h2>
+    </div>
+    <div class="drop-zone" id="dropZone">
+      <div class="drop-zone-icon">
+        <span>$</span>
+        <span class="cursor-blink" aria-hidden="true"></span>
+      </div>
+      <div class="drop-zone-text" id="dropText">Trascina qui il file di log</div>
+      <div class="drop-zone-hint">oppure clicca per selezionarlo — .log, .txt, qualsiasi formato</div>
+      <input type="file" id="fileInput" accept=".log,.txt,.csv,text/plain,application/octet-stream" aria-label="Seleziona file di log">
+      <div class="file-name-display" id="fileName"></div>
+    </div>
+  </section>
+
+  <!-- STEP 2: Format -->
+  <section class="card" aria-labelledby="step2-title">
+    <div class="card-header">
+      <span class="step-num">2</span>
+      <h2 id="step2-title">Scegli il formato di parsing</h2>
+    </div>
+    <div class="format-group" role="radiogroup" aria-label="Formato di parsing">
+      <button class="format-btn active" role="radio" aria-checked="true" data-format="apache" id="fmtApache">
+        <span class="format-btn-icon" aria-hidden="true">{ }</span>
+        <span class="format-btn-label">Apache access log<small>Common / Combined Log Format</small></span>
+      </button>
+      <button class="format-btn" role="radio" aria-checked="false" data-format="syslog" id="fmtSyslog">
+        <span class="format-btn-icon" aria-hidden="true">&lt;/&gt;</span>
+        <span class="format-btn-label">Syslog<small>RFC 3164 — log di sistema</small></span>
+      </button>
+      <button class="format-btn" role="radio" aria-checked="false" data-format="custom" id="fmtCustom">
+        <span class="format-btn-icon" aria-hidden="true">.*</span>
+        <span class="format-btn-label">Personalizzato<small>Regex definita dall'utente</small></span>
+      </button>
+    </div>
+
+    <div class="regex-area" id="regexArea">
+      <label for="regexInput">Espressione regolare</label>
+      <p class="regex-help">Usa gruppi con nome <code>(?P&lt;nome&gt;...)</code> per intestazioni leggibili, oppure gruppi normali <code>(...)</code> per colonne numerate.</p>
+      <div class="regex-input-wrap">
+        <input type="text" id="regexInput" placeholder="es: ^(?P&lt;ip&gt;\S+) \[(?P&lt;data&gt;[^\]]+)\] &quot;(?P&lt;metodo&gt;\S+) (?P&lt;url&gt;\S+)&quot; (?P&lt;status&gt;\d+)"
+               spellcheck="false" autocomplete="off">
+      </div>
+    </div>
+  </section>
+
+  <!-- Action -->
+  <button class="btn-parse" id="btnParse" disabled>
+    <span class="spinner" aria-hidden="true"></span>
+    <span class="btn-label">Analizza il file</span>
+  </button>
+
+  <div class="status-msg" id="statusMsg" role="alert"></div>
+
+  <!-- STEP 3: Results -->
+  <section class="results-section" id="resultsSection" aria-labelledby="results-title">
+    <div class="card">
+      <div class="card-header">
+        <span class="step-num">3</span>
+        <h2 id="results-title">Anteprima del CSV</h2>
+      </div>
+      <div class="results-meta">
+        <span class="results-count ok" id="resultsCount"></span>
+        <span class="results-count warn" id="resultsErrors" style="display:none;"></span>
+        <button class="btn-download" id="btnDownload">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Scarica CSV
+        </button>
+      </div>
+      <div class="table-wrap" id="tableWrap">
+        <table id="previewTable"></table>
+      </div>
+      <div class="errors-panel" id="errorsPanel">
+        <button class="errors-toggle" id="errorsToggle">Mostra righe non analizzate</button>
+        <div class="errors-list" id="errorsList" style="display:none;"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer" role="contentinfo">
+  <p>LogFlow — Parser automatico di log. I file vengono elaborati localmente sul server; nulla viene conservato dopo l'elaborazione.</p>
+</footer>
+
+<script>
+/* ── DOM refs ─────────────────────────────────────────────────── */
+const dropZone    = document.getElementById('dropZone');
+const fileInput   = document.getElementById('fileInput');
+const dropText    = document.getElementById('dropText');
+const fileNameEl  = document.getElementById('fileName');
+const btnParse    = document.getElementById('btnParse');
+const statusMsg   = document.getElementById('statusMsg');
+const resultsSec  = document.getElementById('resultsSection');
+const resultsCnt  = document.getElementById('resultsCount');
+const resultsErr  = document.getElementById('resultsErrors');
+const btnDownload = document.getElementById('btnDownload');
+const tableWrap   = document.getElementById('tableWrap');
+const previewTbl  = document.getElementById('previewTable');
+const errorsPanel = document.getElementById('errorsPanel');
+const errorsToggle= document.getElementById('errorsToggle');
+const errorsList  = document.getElementById('errorsList');
+const regexArea   = document.getElementById('regexArea');
+const regexInput  = document.getElementById('regexInput');
+
+let currentFile     = null;
+let currentFormat   = 'apache';
+let lastParseResult = null;
+let uploadFileData  = null; // stored FormData for download
+
+/* ── Format selector ──────────────────────────────────────────── */
+document.querySelectorAll('.format-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.format-btn').forEach(b => {
+      b.classList.remove('active');
+      b.setAttribute('aria-checked', 'false');
+    });
+    btn.classList.add('active');
+    btn.setAttribute('aria-checked', 'true');
+    currentFormat = btn.dataset.format;
+    regexArea.classList.toggle('visible', currentFormat === 'custom');
+    updateParseButton();
+  });
+});
+
+// Keyboard: arrow keys in radiogroup
+document.querySelector('.format-group').addEventListener('keydown', (e) => {
+  const btns = [...document.querySelectorAll('.format-btn')];
+  const idx = btns.indexOf(document.activeElement);
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+    e.preventDefault();
+    const next = (idx + 1) % btns.length;
+    btns[next].focus();
+    btns[next].click();
+  } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    const prev = (idx - 1 + btns.length) % btns.length;
+    btns[prev].focus();
+    btns[prev].click();
+  }
+});
+
+/* ── File upload: drag & drop ─────────────────────────────────── */
+['dragenter', 'dragover'].forEach(ev => {
+  dropZone.addEventListener(ev, (e) => {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
+  });
+});
+
+['dragleave', 'drop'].forEach(ev => {
+  dropZone.addEventListener(ev, () => {
+    dropZone.classList.remove('dragover');
+  });
+});
+
+dropZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  const files = e.dataTransfer.files;
+  if (files.length > 0) handleFile(files[0]);
+});
+
+dropZone.addEventListener('click', (e) => {
+  if (e.target === fileInput) return;
+  fileInput.click();
+});
+
+fileInput.addEventListener('change', () => {
+  if (fileInput.files.length > 0) handleFile(fileInput.files[0]);
+});
+
+function handleFile(file) {
+  currentFile = file;
+  dropZone.classList.add('has-file');
+  dropText.textContent = 'File caricato';
+  fileNameEl.textContent = file.name + ' (' + formatBytes(file.size) + ')';
+  updateParseButton();
+  // Reset results
+  resetResults();
+}
+
+function formatBytes(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / 1048576).toFixed(1) + ' MB';
+}
+
+function updateParseButton() {
+  btnParse.disabled = !currentFile || (currentFormat === 'custom' && !regexInput.value.trim());
+}
+
+regexInput.addEventListener('input', updateParseButton);
+
+/* ── Parse ────────────────────────────────────────────────────── */
+btnParse.addEventListener('click', async () => {
+  if (!currentFile) return;
+
+  // Validate custom regex
+  if (currentFormat === 'custom' && !regexInput.value.trim()) {
+    showStatus('Inserisci un\'espressione regolare per il formato personalizzato.', 'error');
+    return;
+  }
+
+  btnParse.classList.add('loading');
+  btnParse.disabled = true;
+  hideStatus();
+  resetResults();
+
+  const formData = new FormData();
+  formData.append('file', currentFile);
+  formData.append('format', currentFormat);
+  if (currentFormat === 'custom') {
+    formData.append('regex', regexInput.value.trim());
+  }
+
+  // Store for download
+  uploadFileData = formData;
+
+  try {
+    const resp = await fetch('api/parse', { method: 'POST', body: formData });
+    const data = await resp.json();
+
+    if (!resp.ok) {
+      showStatus(data.error || 'Errore durante il parsing.', 'error');
+      return;
+    }
+
+    lastParseResult = data;
+    renderResults(data);
+
+  } catch (err) {
+    showStatus('Errore di connessione: impossibile raggiungere il server.', 'error');
+  } finally {
+    btnParse.classList.remove('loading');
+    btnParse.disabled = false;
+  }
+});
+
+/* ── Results rendering ────────────────────────────────────────── */
+function renderResults(data) {
+  resultsSec.classList.add('visible');
+
+  const nParsed = data.total_parsed || data.rows.length;
+  const nErrors = data.total_errors || 0;
+
+  resultsCnt.textContent = nParsed + ' righe analizzate';
+  resultsCnt.className = 'results-count ok';
+
+  if (nErrors > 0) {
+    resultsErr.textContent = nErrors + ' righe non riconosciute';
+    resultsErr.className = 'results-count warn';
+    resultsErr.style.display = 'inline-block';
+    errorsPanel.classList.add('visible');
+    errorsList.innerHTML = data.errors.map(e =>
+      '<div>Riga ' + e.line + ': ' + escapeHTML(e.text) + '</div>'
+    ).join('');
+    errorsList.style.display = 'none';
+    errorsToggle.textContent = 'Mostra ' + nErrors + ' righe non analizzate';
+  } else {
+    resultsErr.style.display = 'none';
+    errorsPanel.classList.remove('visible');
+  }
+
+  // Build table
+  const cols = data.columns;
+  const rows = data.rows;
+  const previewRows = rows.slice(0, 200); // max 200 rows in preview
+
+  let html = '<thead><tr>';
+  html += '<th>#</th>';
+  cols.forEach(c => { html += '<th>' + escapeHTML(c) + '</th>'; });
+  html += '</tr></thead><tbody>';
+
+  previewRows.forEach((row, i) => {
+    html += '<tr><td>' + (i + 1) + '</td>';
+    row.forEach((cell, j) => {
+      const colName = cols[j] || '';
+      let cls = '';
+      const val = cell || '';
+      // Style special columns
+      if (/IP/i.test(colName)) cls = 'cell-ip';
+      if (/metodo|method/i.test(colName)) cls = 'cell-method';
+      if (/codice|status|stato/i.test(colName)) {
+        cls = 'cell-status';
+        const code = parseInt(val, 10);
+        if (!isNaN(code)) {
+          cls += (code >= 200 && code < 400) ? ' cell-status-ok' : ' cell-status-err';
+        }
+      }
+      html += '<td class="' + cls + '">' + escapeHTML(val) + '</td>';
+    });
+    html += '</tr>';
+  });
+
+  if (rows.length > 200) {
+    html += '<tr><td colspan="' + (cols.length + 1) + '" style="text-align:center;color:var(--text-muted);padding:16px;">... e altre ' + (rows.length - 200) + ' righe (anteprima limitata a 200)</td></tr>';
+  }
+
+  html += '</tbody>';
+  previewTbl.innerHTML = html;
+}
+
+/* ── Download ─────────────────────────────────────────────────── */
+btnDownload.addEventListener('click', async () => {
+  if (!uploadFileData) return;
+
+  btnDownload.disabled = true;
+  const origText = btnDownload.innerHTML;
+
+  try {
+    const formData = new FormData();
+    // Rebuild from stored data
+    formData.append('file', currentFile);
+    formData.append('format', currentFormat);
+    if (currentFormat === 'custom') {
+      formData.append('regex', regexInput.value.trim());
+    }
+
+    const resp = await fetch('api/download', { method: 'POST', body: formData });
+
+    if (!resp.ok) {
+      const err = await resp.json();
+      showStatus(err.error || 'Errore durante il download.', 'error');
+      return;
+    }
+
+    const blob = await resp.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'log_convertito.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+  } catch (err) {
+    showStatus('Errore di connessione durante il download.', 'error');
+  } finally {
+    btnDownload.disabled = false;
+    btnDownload.innerHTML = origText;
+  }
+});
+
+/* ── Errors toggle ────────────────────────────────────────────── */
+errorsToggle.addEventListener('click', () => {
+  const visible = errorsList.style.display !== 'none';
+  errorsList.style.display = visible ? 'none' : 'block';
+  errorsToggle.textContent = visible ? 'Mostra righe non analizzate' : 'Nascondi righe non analizzate';
+});
+
+/* ── Helpers ──────────────────────────────────────────────────── */
+function showStatus(msg, type) {
+  statusMsg.textContent = msg;
+  statusMsg.className = 'status-msg visible ' + type;
+}
+function hideStatus() {
+  statusMsg.className = 'status-msg';
+  statusMsg.textContent = '';
+}
+function resetResults() {
+  resultsSec.classList.remove('visible');
+  previewTbl.innerHTML = '';
+  resultsCnt.textContent = '';
+  resultsErr.style.display = 'none';
+  errorsPanel.classList.remove('visible');
+  errorsList.style.display = 'none';
+  errorsList.innerHTML = '';
+  lastParseResult = null;
+  hideStatus();
+}
+function escapeHTML(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+</script>
+
+</body>
+</html>
