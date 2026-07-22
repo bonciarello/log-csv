@@ -1,3 +1,2 @@
 User-agent: *
 Allow: /
-Sitemap: https://cristianporco.it/app/convertitore-di-file-di-log-in-file-csv-strutturati-con-parser-automatico/sitemap.xml
